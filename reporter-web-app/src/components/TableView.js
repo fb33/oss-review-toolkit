@@ -1,12 +1,33 @@
+/*
+ * Copyright (C) 2017-2020 HERE Europe B.V.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ * License-Filename: LICENSE
+ */
+
 import React from 'react';
 import { connect } from 'react-redux';
 import {
     Button,
-    Icon,
     Table,
-    // Tag,
     Tooltip
 } from 'antd';
+import {
+    FileAddOutlined,
+    FileExcelOutlined
+} from '@ant-design/icons';
 import PropTypes from 'prop-types';
 import {
     getOrtResult,
@@ -33,84 +54,93 @@ class TableView extends React.Component {
             webAppOrtResult
         } = this.props;
 
+        const sortColumnFilters = (a, b) => {
+            if (a.text < b.text) {
+                return -1;
+            }
+            if (a.text > b.text) {
+                return 1;
+            }
+            return 0;
+        };
+
         // Specifies table columns as per
         // https://ant.design/components/table/
         const columns = [
             {
                 align: 'right',
                 filters: (() => [
-                    { text: 'Issues', value: 'issues' },
-                    { text: 'Violations', value: 'violations' }
+                    {
+                        text: (
+                            <span>
+                                <FileExcelOutlined className="ort-blue" />
+                                {' '}
+                                Excluded
+                            </span>
+                        ),
+                        value: 'excluded'
+                    },
+                    {
+                        text: (
+                            <span>
+                                <FileAddOutlined />
+                                {' '}
+                                Included
+                            </span>
+                        ),
+                        value: 'included'
+                    }
                 ])(),
                 filterMultiple: true,
-                key: 'issues',
+                filteredValue: filteredInfo.excludes || null,
+                key: 'excludes',
                 onFilter: (value, pkg) => {
-                    if (value === 'issues') {
-                        return pkg.hasIssues(webAppOrtResult);
+                    if (value === 'excluded') {
+                        return pkg.isExcluded;
                     }
 
-                    if (value === 'violations') {
-                        return pkg.hasViolations(webAppOrtResult);
+                    if (value === 'included') {
+                        return !pkg.isExcluded;
                     }
 
                     return false;
                 },
-                render: (pkg) => {
-                    if (pkg.hasIssues(webAppOrtResult) || pkg.hasViolations(webAppOrtResult)) {
-                        return (
-                            <Icon
-                                type="exclamation-circle"
-                                className="ort-error"
-                            />
-                        );
-                    }
-
-                    return (
-                        <Icon
-                            type="check-circle"
-                            className="ort-success"
-                        />
-                    );
-                },
-                width: '0.8em'
-            },
-            {
-                align: 'right',
-                dataIndex: 'projects',
-                filters: (() => {
-                    const projects = webAppOrtResult.getProjects();
-                    return projects.map((project, index) => ({ text: project.definitionFilePath, value: index }));
-                })(),
-                filteredValue: filteredInfo.projects || null,
-                onFilter: (value, record) => record.projectIndexes.includes(parseInt(value, 10)),
-                render: (text, record) => {
-                    const prj = webAppOrtResult
-                        .getProjectByIndex(record.projectIndexes[0]);
-                    if (prj && prj.definitionFilePath) {
-                        return (
-                            <span className="ort-project-id">
-                                <Tooltip
-                                    placement="right"
-                                    title={`Defined in ${prj.definitionFilePath}`}
-                                >
-                                    <Icon type="file-text" />
-                                </Tooltip>
-                            </span>
-                        );
-                    }
-
-                    return (
+                render: (pkg) => (
+                    pkg.isExcluded ? (
                         <span className="ort-project-id">
-                            <Icon type="file-text" />
+                            <Tooltip
+                                placement="right"
+                                title="FIXME INSERT EXCLUDE REASON"
+                            >
+                                <FileExcelOutlined className="ort-blue" />
+                            </Tooltip>
                         </span>
-                    );
-                },
-                width: '0.8em'
+                    ) : (
+                        <FileAddOutlined />
+                    )
+                ),
+                width: '2em'
             },
             {
                 align: 'left',
                 dataIndex: 'id',
-                onFilter: (value, record) => record.id.includes(value),
+                ellipsis: true,
+                filters: (() => {
+                    const { projects } = webAppOrtResult;
+                    return projects
+                        .map(
+                            (project) => (
+                                {
+                                    text: project.definitionFilePath ? project.definitionFilePath : project.id,
+                                    value: project._id
+                                }
+                            )
+                        )
+                        .sort(sortColumnFilters);
+                })(),
+                filterMultiple: true,
+                filteredValue: filteredInfo.id || null,
+                onFilter: (value, pkg) => pkg.projectIndexes.has(value),
                 sorter: (a, b) => {
                     const idA = a.id.toUpperCase();
                     const idB = b.id.toUpperCase();
@@ -124,99 +154,79 @@ class TableView extends React.Component {
                     return 0;
                 },
                 sortOrder: sortedInfo.columnKey === 'id' && sortedInfo.order,
-                title: 'Package',
-                render: text => (
-                    <span
-                        className="ort-package-id ort-word-break-wrap"
-                    >
-                        {text}
-                    </span>
-                )
+                title: 'Package'
             },
             {
                 align: 'left',
-                dataIndex: 'scopes',
-                filters: (() => webAppOrtResult.scopes.map(scope => ({ text: scope, value: scope })))(),
-                filteredValue: filteredInfo.scopes || null,
-                onFilter: (scope, component) => component.scopes.includes(scope),
+                dataIndex: 'scopeIndexes',
+                filters: (
+                    () => webAppOrtResult.scopes
+                        .map(
+                            (scope) => ({ text: scope.name, value: scope.id })
+                        )
+                        .sort(sortColumnFilters)
+                )(),
+                filteredValue: filteredInfo.scopeIndexes || null,
+                onFilter: (value, pkg) => pkg.hasScopeIndex(value),
                 title: 'Scopes',
-                render: (text, row) => (
-                    <ul className="ort-table-list">
-                        {row.scopes.map(scope => (
-                            <li key={`scope-${scope}`}>
-                                {scope}
-                            </li>
-                        ))}
-                    </ul>
+                render: (scopeIndexes, pkg) => (
+                    <span>
+                        {Array.from(pkg.scopeNames).join(',')}
+                    </span>
                 )
             },
             {
                 align: 'center',
                 dataIndex: 'levels',
-                filters: (() => webAppOrtResult.levels.map(level => ({ text: level, value: level })))(),
+                filters: (() => webAppOrtResult.levels.map((level) => ({ text: level, value: level })))(),
                 filteredValue: filteredInfo.levels || null,
                 filterMultiple: true,
-                onFilter: (level, component) => component.levels.includes(parseInt(level, 10)),
-                render: (text, row) => (
-                    <ul className="ort-table-list">
-                        {row.levels.sort().map(level => (
-                            <li key={`level-${level}`}>
-                                {level}
-                            </li>
-                        ))}
-                    </ul>
-                ),
+                onFilter: (value, pkg) => pkg.hasLevel(value),
+                textWrap: 'word-break',
                 title: 'Levels',
+                render: (levels) => (
+                    <span>
+                        {Array.from(levels).join(', ')}
+                    </span>
+                ),
                 width: 80
             },
             {
                 align: 'left',
                 dataIndex: 'declaredLicenses',
-                filters: (() => webAppOrtResult.declaredLicenses.map(license => ({ text: license, value: license })))(),
+                filters: (
+                    () => webAppOrtResult.declaredLicenses.map((license) => ({ text: license, value: license }))
+                )(),
                 filteredValue: filteredInfo.declaredLicenses || null,
                 filterMultiple: true,
                 key: 'declaredLicenses',
-                onFilter: (value, record) => record.declaredLicenses.includes(value),
+                onFilter: (value, pkg) => pkg.declaredLicenses.has(value),
+                textWrap: 'word-break',
                 title: 'Declared Licenses',
-                render: (text, row) => (
-                    <ul className="ort-table-list">
-                        {row.declaredLicenses.map((license, index) => (
-                            <span
-                                className="ort-word-break-wrap"
-                                key={`ort-package-license-${license}`}
-                            >
-                                {license}
-                                {index !== (row.declaredLicenses.length - 1) && ', '}
-                            </span>
-                        ))}
-                    </ul>
+                render: (declaredLicenses) => (
+                    <span>
+                        {Array.from(declaredLicenses).join(', ')}
+                    </span>
                 ),
-                width: 160
+                width: '18%'
             },
             {
                 align: 'left',
                 dataIndex: 'detectedLicenses',
-                filters: (() => webAppOrtResult.detectedLicenses.map(license => ({ text: license, value: license })))(),
+                filters: (
+                    () => webAppOrtResult.detectedLicenses.map((license) => ({ text: license, value: license }))
+                )(),
                 filteredValue: filteredInfo.detectedLicenses || null,
                 filterMultiple: true,
-                onFilter: (license, component) => component.detectedLicenses.includes(license),
+                onFilter: (license, pkg) => pkg.detectedLicenses.has(license),
+                textWrap: 'word-break',
                 title: 'Detected Licenses',
-                render: (text, row) => (
-                    <ul className="ort-table-list">
-                        {
-                            row.detectedLicenses.map((license, index) => (
-                                <span
-                                    className="ort-word-break-wrap"
-                                    key={`ort-package-license-${license}`}
-                                >
-                                    {license}
-                                    {index !== (row.detectedLicenses.length - 1) && ', '}
-                                </span>
-                            ))
-                        }
-                    </ul>
+                render: (detectedLicenses) => (
+                    <span>
+                        {Array.from(detectedLicenses).join(', ')}
+                    </span>
                 ),
-                width: 160
+                width: '18%'
             }
         ];
 
@@ -235,14 +245,13 @@ class TableView extends React.Component {
                 <Table
                     columns={columns}
                     expandedRowRender={
-                        pkg => (
+                        (pkg) => (
                             <PackageCollapse
                                 pkg={pkg}
-                                webAppOrtResult={webAppOrtResult}
                             />
                         )
                     }
-                    dataSource={webAppOrtResult.packagesTreeFlatArray}
+                    dataSource={webAppOrtResult.packages}
                     expandRowByClick
                     indentSize={0}
                     locale={{
@@ -284,7 +293,7 @@ TableView.propTypes = {
     webAppOrtResult: PropTypes.object.isRequired
 };
 
-const mapStateToProps = state => ({
+const mapStateToProps = (state) => ({
     shouldComponentUpdate: getTableViewShouldComponentUpdate(state),
     tableView: getTableView(state),
     webAppOrtResult: getOrtResult(state)

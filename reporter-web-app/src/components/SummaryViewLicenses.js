@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2019 HERE Europe B.V.
+ * Copyright (C) 2019-2020 HERE Europe B.V.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,8 +19,9 @@
 
 import React from 'react';
 import {
-    Col, Icon, Table, Tabs, Row
+    Col, Table, Tabs, Row
 } from 'antd';
+import { FileTextOutlined } from '@ant-design/icons';
 import PropTypes from 'prop-types';
 import LicenseChart from './LicenseChart';
 
@@ -63,7 +64,7 @@ const SummaryViewLicenses = (props) => {
                     }, [])
                 )(),
                 filteredValue: filteredInfo.name || null,
-                onFilter: (license, record) => record.name === license,
+                onFilter: (license, row) => row.name === license,
                 sorter: (a, b) => {
                     const nameA = a.name.toUpperCase();
                     const nameB = b.name.toUpperCase();
@@ -79,11 +80,12 @@ const SummaryViewLicenses = (props) => {
                 sortOrder: sortedInfo.columnKey === 'name' && sortedInfo.order,
                 key: 'name',
                 render: (text, row) => (
-                    <span className="ort-word-break-wrap">
-                        <Icon type="file-text" style={{ color: row.color }} />
+                    <span>
+                        <FileTextOutlined style={{ color: row.color }} />
                         {` ${text}`}
                     </span>
-                )
+                ),
+                textWrap: 'word-break'
             }, {
                 title: 'Packages',
                 dataIndex: 'value',

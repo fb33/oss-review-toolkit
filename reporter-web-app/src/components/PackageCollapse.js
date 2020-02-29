@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 HERE Europe B.V.
+ * Copyright (C) 2019-2020 HERE Europe B.V.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,8 +27,8 @@ import IssuesTable from './IssuesTable';
 import PackageDetails from './PackageDetails';
 import PackageLicenses from './PackageLicenses';
 import PackagePaths from './PackagePaths';
-import PackageScanResults from './PackageScanResults';
-import ViolationsTable from './ViolationsTable';
+import PackageFindingsTable from './PackageFindingsTable';
+import RuleViolationsTable from './RuleViolationsTable';
 
 const { Panel } = Collapse;
 
@@ -36,7 +36,6 @@ const { Panel } = Collapse;
 const PackageCollapse = (props) => {
     const {
         pkg,
-        filterScanFindings,
         includeLicenses,
         includeIssues,
         includeViolations,
@@ -47,8 +46,7 @@ const PackageCollapse = (props) => {
         showIssues,
         showViolations,
         showPaths,
-        showScanFindings,
-        webAppOrtResult
+        showScanFindings
     } = props;
 
     const defaultActiveKey = [];
@@ -79,28 +77,29 @@ const PackageCollapse = (props) => {
 
     return (
         <Collapse
+            className="ort-package-collapse"
             bordered={false}
             defaultActiveKey={defaultActiveKey}
         >
-            <Panel header="Package Details" key="1">
-                <PackageDetails pkg={pkg} webAppOrtResult={webAppOrtResult} />
+            <Panel header="Details" key="1">
+                <PackageDetails pkg={pkg} />
             </Panel>
             {
                 includeLicenses
-                && pkg.hasLicenses(webAppOrtResult)
+                && pkg.hasLicenses()
                 && (
-                    <Panel header="Package Licenses" key="2">
-                        <PackageLicenses pkg={pkg} webAppOrtResult={webAppOrtResult} />
+                    <Panel header="Licenses" key="2">
+                        <PackageLicenses pkg={pkg} />
                     </Panel>
                 )
             }
             {
                 includeIssues
-                && pkg.hasIssues(webAppOrtResult)
+                && pkg.hasIssues()
                 && (
-                    <Panel header="Package Issues" key="3">
+                    <Panel header="Issues" key="3">
                         <IssuesTable
-                            issues={pkg.getIssues(webAppOrtResult)}
+                            issues={pkg.issues}
                             showPackageColumn={false}
                         />
                     </Panel>
@@ -108,12 +107,12 @@ const PackageCollapse = (props) => {
             }
             {
                 includeViolations
-                && pkg.hasViolations(webAppOrtResult)
+                && pkg.hasRuleViolations()
                 && (
-                    <Panel header="Package Violations" key="4">
-                        <ViolationsTable
+                    <Panel header="Rule Violations" key="4">
+                        <RuleViolationsTable
                             showPackageColumn={false}
-                            violations={pkg.getViolations(webAppOrtResult)}
+                            violations={pkg.ruleViolations}
                         />
                     </Panel>
                 )
@@ -122,21 +121,18 @@ const PackageCollapse = (props) => {
                 includePaths
                 && pkg.hasPaths()
                 && (
-                    <Panel header="Package Paths" key="5">
-                        <PackagePaths pkg={pkg} webAppOrtResult={webAppOrtResult} />
+                    <Panel header="Paths" key="5">
+                        <PackagePaths pkg={pkg} />
                     </Panel>
                 )
             }
             {
                 includeScanFindings
-                && pkg.hasScanFindings(webAppOrtResult)
-                && pkg.hasDetectedLicenses()
+                && pkg.hasFindings()
                 && (
-                    <Panel header="Package Scan Results" key="6">
-                        <PackageScanResults
-                            filter={filterScanFindings}
+                    <Panel header="Scan Results" key="6">
+                        <PackageFindingsTable
                             pkg={pkg}
-                            webAppOrtResult={webAppOrtResult}
                         />
                     </Panel>
                 )
@@ -146,7 +142,6 @@ const PackageCollapse = (props) => {
 };
 
 PackageCollapse.propTypes = {
-    filterScanFindings: PropTypes.object,
     pkg: PropTypes.object.isRequired,
     includeLicenses: PropTypes.bool,
     includeIssues: PropTypes.bool,
@@ -158,15 +153,10 @@ PackageCollapse.propTypes = {
     showIssues: PropTypes.bool,
     showViolations: PropTypes.bool,
     showPaths: PropTypes.bool,
-    showScanFindings: PropTypes.bool,
-    webAppOrtResult: PropTypes.object.isRequired
+    showScanFindings: PropTypes.bool
 };
 
 PackageCollapse.defaultProps = {
-    filterScanFindings: {
-        type: [],
-        value: []
-    },
     includeLicenses: true,
     includeIssues: true,
     includeViolations: true,

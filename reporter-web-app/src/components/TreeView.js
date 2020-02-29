@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2019 HERE Europe B.V.
+ * Copyright (C) 2017-2020 HERE Europe B.V.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,11 +23,14 @@ import {
     Alert,
     Button,
     Drawer,
-    Icon,
     Input,
     Row,
     Tree
 } from 'antd';
+import {
+    ArrowDownOutlined,
+    ArrowUpOutlined
+} from '@ant-design/icons';
 import { connect } from 'react-redux';
 import scrollIntoView from 'scroll-into-view-if-needed';
 import PackageCollapse from './PackageCollapse';
@@ -40,21 +43,6 @@ import store from '../store';
 
 const { TreeNode } = Tree;
 const { Search } = Input;
-
-const getParentKey = (key, tree) => {
-    let parentKey;
-    for (let i = 0; i < tree.length; i++) {
-        const node = tree[i];
-        if (node.children) {
-            if (node.children.some(item => item.key === key)) {
-                parentKey = node.key;
-            } else if (getParentKey(key, node.children)) {
-                parentKey = getParentKey(key, node.children);
-            }
-        }
-    }
-    return parentKey;
-};
 
 class TreeView extends React.Component {
     componentDidMount() {
@@ -75,22 +63,33 @@ class TreeView extends React.Component {
 
         const { value } = e.target;
         const searchValue = value.trim();
-        const {
-            webAppOrtResult: {
-                packagesTreeArray: tree,
-                packagesTreeNodesArray: treeNodes
-            }
-        } = this.props;
-        const expandedKeys = (searchValue === '') ? [] : treeNodes
-            .map((item) => {
-                if (item.id.indexOf(searchValue) > -1) {
-                    return getParentKey(item.key, tree);
+        const { webAppOrtResult } = this.props;
+        const searchPackageTreeNodeKeys = (searchValue === '') ? [] : webAppOrtResult.packages
+            .reduce((acc, pkg) => {
+                if (pkg.id.indexOf(searchValue) > -1) {
+                    const treeNodeKeys = webAppOrtResult.getTreeNodeParentKeysByIndex(pkg.packageIndex);
+                    if (treeNodeKeys) {
+                        acc.push(treeNodeKeys);
+                    }
                 }
-                return null;
-            })
-            .filter((item, i, self) => item && self.indexOf(item) === i);
-        const matchedKeys = (searchValue === '') ? [] : treeNodes
-            .filter(item => item.id.indexOf(searchValue) > -1);
+
+                return acc;
+            }, []);
+        console.log('searchPackageTreeNodeKeys', searchPackageTreeNodeKeys);
+        window.searchPackageTreeNodeKeys = searchPackageTreeNodeKeys;
+
+        const expandedKeys = Array.from(searchPackageTreeNodeKeys
+            .reduce(
+                (acc, treeNodeKeys) => new Set([...acc, ...treeNodeKeys.parentKeys]),
+                new Set()
+            ));
+        const matchedKeys = Array.from(searchPackageTreeNodeKeys
+            .reduce(
+                (acc, treeNodeKeys) => new Set([...acc, ...treeNodeKeys.keys]),
+                new Set()
+            ));
+        console.log('expandedKeys', expandedKeys);
+        console.log('matchedKeys', matchedKeys);
 
         store.dispatch({
             type: 'TREE::SEARCH',
@@ -107,15 +106,23 @@ class TreeView extends React.Component {
     };
 
     onSelectTreeNode = (selectedKeys, e) => {
-        const { node: { props: { dataRef } } } = e;
+        const { selectedNodes } = e;
 
-        store.dispatch({
-            type: 'TREE::NODE_SELECT',
-            payload: {
-                selectedPackage: dataRef,
-                selectedKeys
+        if (selectedNodes.length > 0) {
+            const webAppPackage = selectedNodes[0];
+
+            if (webAppPackage) {
+                const { packageIndex } = webAppPackage;
+
+                store.dispatch({
+                    type: 'TREE::NODE_SELECT',
+                    payload: {
+                        selectedPackageIndex: packageIndex,
+                        selectedKeys
+                    }
+                });
             }
-        });
+        }
     }
 
     onClickPreviousSearchMatch = (e) => {
@@ -161,10 +168,11 @@ class TreeView extends React.Component {
         const {
             webAppOrtResult,
             treeView: {
-                selectedPackage,
+                selectedPackageIndex,
                 showDrawer
             }
         } = this.props;
+        const selectedPackage = webAppOrtResult.getPackageByIndex(selectedPackageIndex);
 
         if (!showDrawer) {
             return null;
@@ -172,59 +180,30 @@ class TreeView extends React.Component {
 
         return (
             <Drawer
-                title={
-                    (() => {
-                        if (selectedPackage.hasIssues(webAppOrtResult)
-                        || selectedPackage.hasViolations(webAppOrtResult)) {
-                            return (
-                                <span>
-                                    <Icon
-                                        type="exclamation-circle"
-                                        className="ort-error"
-                                    />
-                                    {' '}
-                                    {selectedPackage.id}
-                                </span>
-                            );
-                        }
-
-                        return (
-                            <span>
-                                <Icon
-                                    type="check-circle"
-                                    className="ort-success"
-                                />
-                                {' '}
-                                {selectedPackage.id}
-                            </span>
-                        );
-                    })()
-                }
+                title={selectedPackage.id}
                 placement="right"
                 closable
                 onClose={this.onCloseDrawer}
-                mask={false}
                 visible={showDrawer}
-                width="60%"
+                width="65%"
             >
                 <PackageCollapse
                     pkg={selectedPackage}
-                    webAppOrtResult={webAppOrtResult}
                 />
             </Drawer>
         );
     }
 
-    renderTreeNode = data => data.map((item) => {
+    renderTreeNode = (data) => data.map((item) => {
         const {
             treeView: {
                 searchValue
             }
         } = this.props;
 
-        const index = item.id.indexOf(searchValue);
-        const beforeSearchValueStr = item.id.substr(0, index);
-        const afterSearchValueStr = item.id.substr(index + searchValue.length);
+        const index = item.title.indexOf(searchValue);
+        const beforeSearchValueStr = item.title.substr(0, index);
+        const afterSearchValueStr = item.title.substr(index + searchValue.length);
         let title;
 
         if (index > -1) {
@@ -239,14 +218,20 @@ class TreeView extends React.Component {
             );
         } else {
             title = (
-                <span id={`ort-tree-node-${item.key}`}>{item.id}</span>
+                <span id={`ort-tree-node-${item.key}`}>{item.title}</span>
             );
         }
+
         if (item.children) {
             return (
                 <TreeNode
-                    className={item.key}
+                    className={`node-${item.key}`}
                     dataRef={item}
+                    filterTreeNode={
+                        (node) => {
+                            console.log('arg', node);
+                        }
+                    }
                     key={item.key}
                     title={title}
                 >
@@ -257,7 +242,7 @@ class TreeView extends React.Component {
 
         return (
             <TreeNode
-                className={item.key}
+                className={`node-${item.key}`}
                 dataRef={item}
                 key={item.key}
                 title={title}
@@ -269,7 +254,7 @@ class TreeView extends React.Component {
     render() {
         const {
             webAppOrtResult: {
-                packagesTreeArray: tree
+                dependencyTrees
             },
             treeView: {
                 autoExpandParent,
@@ -295,8 +280,12 @@ class TreeView extends React.Component {
                                 align="middle"
                                 className="ort-tree-navigation"
                             >
-                                <Button onClick={this.onClickNextSearchMatch} icon="arrow-down" />
-                                <Button onClick={this.onClickPreviousSearchMatch} icon="arrow-up" />
+                                <Button onClick={this.onClickNextSearchMatch}>
+                                    <ArrowDownOutlined />
+                                </Button>
+                                <Button onClick={this.onClickPreviousSearchMatch}>
+                                    <ArrowUpOutlined />
+                                </Button>
                                 <span className="ort-tree-navigation-counter">
                                     {searchIndex + 1}
                                     {' '}
@@ -319,13 +308,22 @@ class TreeView extends React.Component {
                     <Tree
                         autoExpandParent={autoExpandParent}
                         expandedKeys={expandedKeys}
+                        filterTreeNode={
+                            (node) => {
+                                if (node.key === 0) {
+                                    console.log('arg', node);
+                                    console.log('matchedKeys', matchedKeys);
+                                    console.log('includes', matchedKeys.includes(node.key));
+                                }
+                                return matchedKeys.includes(node.key);
+                            }
+                        }
                         onExpand={this.onExpandTreeNode}
                         onSelect={this.onSelectTreeNode}
                         showLine
                         selectedKeys={selectedKeys}
-                    >
-                        {this.renderTreeNode(tree)}
-                    </Tree>
+                        treeData={dependencyTrees}
+                    />
                 </div>
                 <div className="ort-tree-drawer">
                     {this.renderDrawer()}
@@ -341,7 +339,7 @@ TreeView.propTypes = {
     webAppOrtResult: PropTypes.object.isRequired
 };
 
-const mapStateToProps = state => ({
+const mapStateToProps = (state) => ({
     shouldComponentUpdate: getTreeViewShouldComponentUpdate(state),
     treeView: getTreeView(state),
     webAppOrtResult: getOrtResult(state)

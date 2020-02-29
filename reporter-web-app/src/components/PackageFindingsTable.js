@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2019 HERE Europe B.V.
+ * Copyright (C) 2017-2020 HERE Europe B.V.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,66 +19,62 @@
 
 import React from 'react';
 import PropTypes from 'prop-types';
-import { Icon, Table } from 'antd';
+import { Table } from 'antd';
+import { CopyrightOutlined, FileTextOutlined } from '@ant-design/icons';
 
 // Generates the HTML to display scanFindings as a Table
-class ScanFindingsTable extends React.Component {
+class PackageFindingsTable extends React.Component {
     constructor(props) {
         super(props);
 
         const {
-            expandedRowRender,
-            filter,
-            pkg,
-            webAppOrtResult
+            pkg
         } = props;
-        const scanFindings = pkg.getScanFindings(webAppOrtResult);
 
         this.state = {
-            expandedRowRender,
-            filter,
-            pkg,
-            scanFindings,
-            webAppOrtResult
+            pkg
         };
-    }
-
-    componentWillReceiveProps(nextProps) {
-        const { pkg, webAppOrtResult } = nextProps;
-        const scanFindings = pkg.getScanFindings(webAppOrtResult);
-        this.setState(prevState => ({
-            ...prevState,
-            ...{
-                pkg,
-                scanFindings,
-                webAppOrtResult
-            }
-        }));
     }
 
     render() {
         const {
-            expandedRowRender,
-            filter,
-            pkg,
-            scanFindings
+            pkg
         } = this.state;
+        const { findings } = pkg;
 
         const columns = [
             {
                 align: 'right',
                 dataIndex: 'type',
                 filters: (() => [
-                    { text: 'Copyright', value: 'COPYRIGHT' },
-                    { text: 'License', value: 'LICENSE' }
+                    {
+                        text: (
+                            <span>
+                                <CopyrightOutlined />
+                                {' '}
+                                Copyright
+                            </span>
+                        ),
+                        value: 'COPYRIGHT'
+                    },
+                    {
+                        text: (
+                            <span>
+                                <FileTextOutlined />
+                                {' '}
+                                License
+                            </span>
+                        ),
+                        value: 'LICENSE'
+                    }
                 ])(),
-                filteredValue: filter.type,
+                filterMultiple: true,
                 key: 'type',
-                onFilter: (value, record) => record.type.includes(value),
-                render: type => (
+                onFilter: (value, row) => value === row.type,
+                render: (type) => (
                     <span className="ort-scan-finding-type">
-                        {type === 'LICENSE' && (<Icon type="file-text" />)}
-                        {type === 'COPYRIGHT' && (<Icon type="copyright" />)}
+                        {type === 'LICENSE' && (<FileTextOutlined />)}
+                        {type === 'COPYRIGHT' && (<CopyrightOutlined />)}
                     </span>
                 ),
                 width: '1em'
@@ -86,14 +82,16 @@ class ScanFindingsTable extends React.Component {
             {
                 title: 'Value',
                 dataIndex: 'value',
-                filteredValue: filter.value,
-                filters: (() => pkg.detectedLicenses.map(license => ({ text: license, value: license })))(),
-                onFilter: (value, record) => record.value.includes(value),
+                filters: (
+                    () => Array.from(pkg.detectedLicenses).map((license) => ({ text: license, value: license }))
+                )(),
+                filterMultiple: true,
+                onFilter: (value, row) => value === row.value,
                 key: 'value',
-                render: value => (
-                    <div className="ort-word-break-wrap">
+                render: (value) => (
+                    <span className="ort-word-break-wrap">
                         {value}
-                    </div>
+                    </span>
                 )
             },
             {
@@ -113,7 +111,7 @@ class ScanFindingsTable extends React.Component {
 
                     return 0;
                 },
-                render: path => (
+                render: (path) => (
                     <div className="ort-word-break-wrap">
                         {path}
                     </div>
@@ -137,8 +135,7 @@ class ScanFindingsTable extends React.Component {
         return (
             <Table
                 columns={columns}
-                dataSource={scanFindings}
-                expandedRowRender={expandedRowRender}
+                dataSource={findings}
                 locale={{
                     emptyText: 'No scan results'
                 }}
@@ -160,19 +157,8 @@ class ScanFindingsTable extends React.Component {
     }
 }
 
-ScanFindingsTable.propTypes = {
-    filter: PropTypes.object,
-    expandedRowRender: PropTypes.func,
-    pkg: PropTypes.object.isRequired,
-    webAppOrtResult: PropTypes.object.isRequired
+PackageFindingsTable.propTypes = {
+    pkg: PropTypes.object.isRequired
 };
 
-ScanFindingsTable.defaultProps = {
-    expandedRowRender: null,
-    filter: {
-        type: [],
-        value: []
-    }
-};
-
-export default ScanFindingsTable;
+export default PackageFindingsTable;

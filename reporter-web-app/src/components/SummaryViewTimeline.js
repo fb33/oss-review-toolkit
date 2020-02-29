@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2019 HERE Europe B.V.
+ * Copyright (C) 2017-2020 HERE Europe B.V.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,8 +20,11 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 import {
-    Alert, Icon, Timeline
+    Alert, Timeline
 } from 'antd';
+import {
+    CheckCircleOutlined, ExclamationCircleOutlined
+} from '@ant-design/icons';
 
 // Generates the HTML to display timeline of findings related to scanned project
 const SummaryViewTimeline = (props) => {
@@ -39,7 +42,7 @@ const SummaryViewTimeline = (props) => {
     } = webAppOrtResult;
     const { revision, type, url } = vcsProcessed;
     const hasIssues = webAppOrtResult.hasIssues();
-    const hasViolations = webAppOrtResult.hasViolations();
+    const hasRuleViolations = webAppOrtResult.hasRuleViolations();
 
     if (!revision || !type || !url) {
         return (<Alert message="No repository information available" type="error" />);
@@ -129,23 +132,17 @@ const SummaryViewTimeline = (props) => {
                 }
             </Timeline.Item>
             <Timeline.Item
-                dot={(
-                    <Icon
-                        type={
-                            (hasIssues || hasViolations)
-                                ? 'exclamation-circle-o' : 'check-circle-o'
-                        }
-                        style={
-                            { fontSize: 16 }
-                        }
-                    />
-                )}
-                color={(hasIssues || hasViolations) ? 'red' : 'green'}
+                dot={
+                    (hasIssues || hasRuleViolations)
+                        ? (<ExclamationCircleOutlined style={{ fontSize: 16 }} />)
+                        : (<CheckCircleOutlined style={{ fontSize: 16 }} />)
+                }
+                color={(hasIssues || hasRuleViolations) ? 'red' : 'green'}
             >
                 {
-                    hasIssues && !hasViolations
+                    hasIssues && !hasRuleViolations
                     && (
-                        <span className="ort-error">
+                        <span className="ort-red">
                             <b>
                                 Completed scan with
                                 {' '}
@@ -158,9 +155,9 @@ const SummaryViewTimeline = (props) => {
                     )
                 }
                 {
-                    !hasIssues && hasViolations
+                    !hasIssues && hasRuleViolations
                     && (
-                        <span className="ort-error">
+                        <span className="ort-red">
                             <b>
                                 Completed scan with
                                 {' '}
@@ -173,9 +170,9 @@ const SummaryViewTimeline = (props) => {
                     )
                 }
                 {
-                    hasIssues && hasViolations
+                    hasIssues && hasRuleViolations
                     && (
-                        <span className="ort-error">
+                        <span className="ort-red">
                             <b>
                                 Completed scan with
                                 {' '}
@@ -195,9 +192,9 @@ const SummaryViewTimeline = (props) => {
                     )
                 }
                 {
-                    !hasIssues && !hasViolations
+                    !hasIssues && !hasRuleViolations
                     && (
-                        <span className="ort-success">
+                        <span className="ort-green">
                             <b>
                                 Completed scan successfully
                             </b>

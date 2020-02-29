@@ -27,24 +27,24 @@ import {
     WarningOutlined
 } from '@ant-design/icons';
 
-// Generates the HTML to display issues as a Table
-const IssuesTable = (props) => {
+// Generates the HTML to display violations as a Table
+const RuleViolationsTable = (props) => {
     const {
-        issues,
         expandedRowRender,
-        showPackageColumn
+        showPackageColumn,
+        violations
     } = props;
 
-    // If return null to prevent React render issue
-    if (!issues) {
+    // If return null to prevent React render error
+    if (!violations) {
         return null;
     }
 
     const columns = [];
-    const totalIssues = issues.length;
+    const totalViolations = violations.length;
 
     columns.push({
-        align: 'right',
+        align: 'center',
         dataIndex: 'severityIndex',
         defaultSortOrder: 'ascend',
         filters: (() => [
@@ -89,7 +89,7 @@ const IssuesTable = (props) => {
                 value: 3
             }
         ])(),
-        onFilter: (value, row) => row.isResolved || row.severity.includes(value),
+        onFilter: (value, row) => row.severityIndex === value,
         sorter: (a, b) => {
             if (a.severityIndex < b.severityIndex) {
                 return -1;
@@ -142,13 +142,20 @@ const IssuesTable = (props) => {
 
     if (showPackageColumn) {
         columns.push({
-            dataIndex: 'packageName',
             ellipsis: true,
+            dataIndex: 'packageName',
             key: 'packageName',
             title: 'Package',
             width: '25%'
         });
     }
+
+    columns.push({
+        dataIndex: 'rule',
+        key: 'rule',
+        title: 'Rule',
+        width: '25%'
+    });
 
     columns.push({
         dataIndex: 'message',
@@ -159,12 +166,12 @@ const IssuesTable = (props) => {
 
     return (
         <Table
-            className="ort-table-issues"
+            className="ort-table-rule-violations"
             columns={columns}
-            dataSource={issues}
+            dataSource={violations}
             expandedRowRender={expandedRowRender}
             locale={{
-                emptyText: 'No issues'
+                emptyText: 'No violations'
             }}
             pagination={
                 {
@@ -174,25 +181,25 @@ const IssuesTable = (props) => {
                     position: 'bottom',
                     showQuickJumper: true,
                     showSizeChanger: true,
-                    showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} issues`
+                    showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} violations`
                 }
             }
             rowKey="key"
-            showHeader={totalIssues > 1}
+            showHeader={totalViolations > 1}
             size="small"
         />
     );
 };
 
-IssuesTable.propTypes = {
-    issues: PropTypes.array.isRequired,
+RuleViolationsTable.propTypes = {
     expandedRowRender: PropTypes.func,
+    violations: PropTypes.array.isRequired,
     showPackageColumn: PropTypes.bool
 };
 
-IssuesTable.defaultProps = {
+RuleViolationsTable.defaultProps = {
     expandedRowRender: null,
     showPackageColumn: false
 };
 
-export default IssuesTable;
+export default RuleViolationsTable;

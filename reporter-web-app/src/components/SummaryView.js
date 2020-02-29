@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2019 HERE Europe B.V.
+ * Copyright (C) 2017-2020 HERE Europe B.V.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,9 +25,9 @@ import {
 } from 'antd';
 import IssuesTable from './IssuesTable';
 import SummaryViewLicenses from './SummaryViewLicenses';
-import SummaryViewTimeline from './SummaryViewTimeline';
+// import SummaryViewTimeline from './SummaryViewTimeline';
 import PackageCollapse from './PackageCollapse';
-import ViolationsTable from './ViolationsTable';
+import RuleViolationsTable from './RuleViolationsTable';
 import {
     getOrtResult,
     getSummaryDeclaredLicenses,
@@ -50,6 +50,13 @@ class SummaryView extends React.Component {
         return shouldComponentUpdate;
     }
 
+    /*
+        <Row>
+            <Col span={22} offset={1}>
+                <SummaryViewTimeline webAppOrtResult={webAppOrtResult} />
+            </Col>
+        </Row>
+    */
     render() {
         const {
             licenses,
@@ -60,52 +67,44 @@ class SummaryView extends React.Component {
             <div className="ort-summary">
                 <Row>
                     <Col span={22} offset={1}>
-                        <SummaryViewTimeline webAppOrtResult={webAppOrtResult} />
-                    </Col>
-                </Row>
-                <Row>
-                    <Col span={22} offset={1}>
-                        {(webAppOrtResult.hasIssues() || webAppOrtResult.hasViolations())
+                        {(webAppOrtResult.hasIssues() || webAppOrtResult.hasRuleViolations())
                             && (
                                 <Tabs tabPosition="top" className="ort-summary-issues">
-                                    { webAppOrtResult.hasViolations()
+                                    { webAppOrtResult.hasRuleViolations()
                                         && (
                                             <TabPane
                                                 tab={(
                                                     <span>
                                                         Violations (
-                                                        {webAppOrtResult.violations.length}
+                                                        {webAppOrtResult.ruleViolations.length}
                                                         )
                                                     </span>
                                                 )}
                                                 key="1"
                                             >
-                                                <ViolationsTable
+                                                <RuleViolationsTable
                                                     expandedRowRender={
-                                                        violation => (
+                                                        (violation) => (
                                                             <PackageCollapse
-                                                                pkg={webAppOrtResult.getPackageById(violation.pkg)}
-                                                                filterScanFindings={{
-                                                                    type: ['LICENSE'],
-                                                                    value: [violation.license]
-                                                                }}
+                                                                pkg={
+                                                                    webAppOrtResult.getPackageByIndex(
+                                                                        violation.packageIndex
+                                                                    )
+                                                                }
                                                                 includeIssues
                                                                 includeScanFindings
                                                                 includeViolations={false}
                                                                 showDetails={false}
                                                                 showIssues={false}
                                                                 showLicenses
-                                                                showScanFindings
-                                                                webAppOrtResult={webAppOrtResult}
                                                             />
                                                         )
                                                     }
                                                     showPackageColumn
-                                                    violations={webAppOrtResult.violations}
+                                                    violations={webAppOrtResult.ruleViolations}
                                                 />
                                             </TabPane>
-                                        )
-                                    }
+                                        )}
                                     { webAppOrtResult.hasIssues()
                                         && (
                                             <TabPane
@@ -120,16 +119,19 @@ class SummaryView extends React.Component {
                                             >
                                                 <IssuesTable
                                                     expandedRowRender={
-                                                        issue => (
+                                                        (issue) => (
                                                             <PackageCollapse
-                                                                pkg={webAppOrtResult.getPackageById(issue.pkg)}
+                                                                pkg={
+                                                                    webAppOrtResult.getPackageByIndex(
+                                                                        issue.packageIndex
+                                                                    )
+                                                                }
                                                                 includeIssues={false}
                                                                 includeScanFindings={false}
                                                                 includeViolations={false}
                                                                 showDetails
                                                                 showLicenses={false}
                                                                 showPaths
-                                                                webAppOrtResult={webAppOrtResult}
                                                             />
                                                         )
                                                     }
@@ -137,11 +139,9 @@ class SummaryView extends React.Component {
                                                     showPackageColumn
                                                 />
                                             </TabPane>
-                                        )
-                                    }
+                                        )}
                                 </Tabs>
-                            )
-                        }
+                            )}
                     </Col>
                 </Row>
                 <Row>
@@ -190,7 +190,7 @@ SummaryView.propTypes = {
     webAppOrtResult: PropTypes.object.isRequired
 };
 
-const mapStateToProps = state => ({
+const mapStateToProps = (state) => ({
     licenses: {
         declared: getSummaryDeclaredLicenses(state),
         declaredChart: getSummaryDeclaredLicensesChart(state),

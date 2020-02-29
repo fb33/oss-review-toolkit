@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2019 HERE Europe B.V.
+ * Copyright (C) 2017-2020 HERE Europe B.V.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -55,7 +55,7 @@ const initState = {
         matchedKeys: [],
         searchValue: '',
         searchIndex: 0,
-        selectedPackage: null,
+        selectedPackageIndex: null,
         selectedKeys: [],
         shouldComponentUpdate: false,
         showDrawer: false
@@ -314,14 +314,14 @@ export default (state = initState, action) => {
         };
     }
     case 'TREE::NODE_SELECT': {
-        const { selectedKeys, selectedPackage } = action.payload;
+        const { selectedKeys, selectedPackageIndex } = action.payload;
 
         return {
             ...state,
             tree: {
                 ...state.tree,
                 selectedKeys,
-                selectedPackage,
+                selectedPackageIndex,
                 showDrawer: true
             }
         };
@@ -338,7 +338,7 @@ export default (state = initState, action) => {
                 matchedKeys,
                 searchIndex: 0,
                 searchValue,
-                selectedPackage: null,
+                selectedPackageIndex: null,
                 selectedKeys: matchedKeys.length > 0 ? [matchedKeys[0].key] : [],
                 showDrawer: false
             }

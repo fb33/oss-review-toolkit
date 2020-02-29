@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 HERE Europe B.V.
+ * Copyright (C) 2020 HERE Europe B.V.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,20 +17,30 @@
  * License-Filename: LICENSE
  */
 
-class RuleViolationResolution {
-    constructor(obj) {
-        this.message = '';
-        this.reason = '';
-        this.comment = '';
+class WebAppCopyright {
+    #_id;
 
-        if (obj instanceof Object) {
-            Object.keys(this).forEach((key) => {
-                if (obj[key] !== undefined) {
-                    this[key] = obj[key];
-                }
-            });
+    #statement;
+
+    constructor(obj) {
+        if (obj) {
+            if (Number.isInteger(obj._id)) {
+                this.#_id = obj._id;
+            }
+
+            if (obj.statement) {
+                this.#statement = obj.statement;
+            }
         }
+    }
+
+    get _id() {
+        return this.#_id;
+    }
+
+    get statement() {
+        return this.#statement;
     }
 }
 
-export default RuleViolationResolution;
+export default WebAppCopyright;

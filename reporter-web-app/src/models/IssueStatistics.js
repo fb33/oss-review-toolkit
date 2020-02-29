@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 HERE Europe B.V.
+ * Copyright (C) 2020 HERE Europe B.V.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,34 +17,40 @@
  * License-Filename: LICENSE
  */
 
-class TextLocation {
+class IssueStatistics {
+    #errors = 0;
+
+    #hints = 0;
+
+    #warnings = 0;
+
     constructor(obj) {
-        this.path = '';
-        this.startLine = '';
-        this.endLine = '';
-
         if (obj instanceof Object) {
-            if (obj.path) {
-                this.path = obj.path;
+            if (obj.errors !== null) {
+                this.#errors = obj.errors;
             }
 
-            if (obj.start_line) {
-                this.startLine = obj.start_line;
+            if (obj.hints !== null) {
+                this.#hints = obj.hints;
             }
 
-            if (obj.startLine) {
-                this.startLine = obj.startLine;
-            }
-
-            if (obj.end_line) {
-                this.endLine = obj.end_line;
-            }
-
-            if (obj.endLine) {
-                this.endLine = obj.endLine;
+            if (obj.warnings !== null) {
+                this.#warnings = obj.warnings;
             }
         }
     }
+
+    get errors() {
+        return this.#errors;
+    }
+
+    get hints() {
+        return this.#hints;
+    }
+
+    get warnings() {
+        return this.#warnings;
+    }
 }
 
-export default TextLocation;
+export default IssueStatistics;
